@@ -77,3 +77,68 @@ def test_data_transcript_shape():
     lines = TRANSCRIPT.strip().splitlines()
     assert len(lines) == 28
     assert "[inaudible]" in TRANSCRIPT
+
+
+def test_regex_safety_net_catches_leaks():
+    out = exercise3_pii.regex_safety_net(
+        "mail a.b+c@x.co.id call 0812-3456-7890 or +62 813 5555 1212 order #4521"
+    )
+    assert out == "mail [EMAIL] call [PHONE] or [PHONE] order #4521"
+
+
+def test_regex_covers_all_dummy_docs():
+    for doc in exercise3_pii.DOCS:
+        out = exercise3_pii.regex_safety_net(doc["text"])
+        for t in doc["pii"]:
+            if "@" in t:
+                assert t not in out
+    # Telepon Indonesia tertangkap; dokumen 3 (0857-...) juga.
+    assert "0812-3456-7890" not in exercise3_pii.regex_safety_net(exercise3_pii.DOCS[0]["text"])
+    assert "+62 813 5555 1212" not in exercise3_pii.regex_safety_net(exercise3_pii.DOCS[1]["text"])
+    assert "0857-1111-2222" not in exercise3_pii.regex_safety_net(exercise3_pii.DOCS[2]["text"])
+
+
+def test_recall_and_leaked():
+    truth = ["Budi", "a@b.co", "Sleman"]
+    assert exercise3_pii.recall("[PERSON] a@b.co [ADDRESS]", truth) == pytest.approx(2 / 3)
+    assert exercise3_pii.leaked("[PERSON] a@b.co [ADDRESS]", truth) == ["a@b.co"]
+
+
+def test_censor_survives_bad_json(fake):
+    fake("not json")
+    assert exercise3_pii.censor("hello") == "hello"
+
+
+def test_highlight_escapes_and_marks():
+    out = exercise3_pii.highlight(
+        "<b>Budi Santoso</b> & Budi", [{"text": "Budi Santoso", "label": "PERSON"}, {"text": "Budi", "label": "PERSON"}]
+    )
+    assert "&lt;b&gt;" in out and "<b>" not in out
+    assert out.count("<mark>") == 2
+
+
+def test_evaluate_flags_wrong_number():
+    from exercise_three.exercise1_summarizer import evaluate
+
+    good = "Orders rose 32%. 2 couriers. Sari will recruit. Dimas builds screen. Budi checks."
+    bad = "Orders rose 30%."
+    assert all(evaluate(good).values())
+    assert not evaluate(bad)["32% atau 30%?"]
+
+
+def test_summarizer_prompt_variants_differ():
+    from exercise_three.exercise1_summarizer import (
+        MY_TRANSCRIPT,
+        SUMMARIZER_SYSTEM_ID,
+        SUMMARIZER_SYSTEM_NO_RULES,
+    )
+
+    assert "Bahasa Indonesia" in SUMMARIZER_SYSTEM_ID
+    assert "filler" not in SUMMARIZER_SYSTEM_NO_RULES
+    assert len(MY_TRANSCRIPT.strip().splitlines()) >= 20
+
+
+def test_glossary_template_formats():
+    t = exercise2_translator.TEMPLATE_WITH_GLOSSARY.format(lang="Indonesian", tone="formal")
+    assert "Paket Hemat" in t and "{" not in t
+    assert len(exercise2_translator.PROMO_TEXTS) == 3

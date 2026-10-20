@@ -8,25 +8,57 @@ from exercise_three.llm import ask_llm
 from exercise_three.prompts import TRANSLATOR_TEMPLATE
 
 
-def translate_campaign(text, lang, tone="friendly", template=TRANSLATOR_TEMPLATE):
+def translate_campaign(
+    text, lang, tone="friendly", template=TRANSLATOR_TEMPLATE, api_key=None
+):
     system = template.format(lang=lang, tone=tone)
-    return ask_llm(system, text)
+    return ask_llm(system, text, api_key=api_key)
 
 
-# TODO Task 1: 3 teks promo berbeda, masing-masing ke 2 bahasa.
-PROMO_TEXTS = []
+# Task 1: 3 teks promo berbeda.
+PROMO_TEXTS = [
+    CAMPAIGN_COPY,
+    "Buy 1 Get 1 Free every Friday! Grab your favorite coffee at SmartResto ☕",
+    "Free delivery for orders above $10. Hungry? SmartResto is one tap away!",
+]
 
-# TODO Task 3: template baru dengan glossary rule,
-# mis. "Always keep 'Paket Hemat' as is." (tetap pakai {lang} dan {tone}).
-TEMPLATE_WITH_GLOSSARY = ""
+# Task 3: glossary rule. Tetap pakai {lang} dan {tone}.
+TEMPLATE_WITH_GLOSSARY = """You are a marketing translator.
+Translate to {lang}. Tone: {tone}.
+Rules:
+- Keep brand names: SmartResto
+- Glossary: always keep 'Paket Hemat' exactly as is, never translate it
+- Keep numbers, discounts, and emojis
+- Keep the call-to-action clear
+- Sound natural, not word-by-word
+Return only the translation."""
+
+GLOSSARY_TEXT = "Try our Paket Hemat: 2 meals + 1 drink for only $5. Order at SmartResto!"
+
+LANGUAGES = ["Indonesian", "Japanese"]
+TONES = ["friendly", "formal"]
 
 
 if __name__ == "__main__":
-    for lang in ["Indonesian", "Japanese"]:
+    print("=== Expected demo ===")
+    for lang in LANGUAGES:
         print(lang, "->", translate_campaign(CAMPAIGN_COPY, lang))
 
-    # TODO Task 2: bandingkan tone='friendly' vs tone='formal'.
-    # TODO Task 1 & 3: loop PROMO_TEXTS x bahasa, lalu coba glossary rule.
+    print("\n=== Task 1: 3 promo x 2 bahasa ===")
+    for text in PROMO_TEXTS:
+        print("\nEN:", text)
+        for lang in LANGUAGES:
+            print(" ", lang, "->", translate_campaign(text, lang))
 
-    # Evaluate: BLEU butuh terjemahan referensi; untuk iklan,
-    # cek manual nada (tone) lebih penting. Catat penilaianmu di README.
+    print("\n=== Task 2: friendly vs formal ===")
+    for tone in TONES:
+        print(f"[{tone}] Indonesian ->", translate_campaign(CAMPAIGN_COPY, "Indonesian", tone))
+
+    print("\n=== Task 3: glossary ===")
+    for label, template in [("tanpa", TRANSLATOR_TEMPLATE), ("dengan", TEMPLATE_WITH_GLOSSARY)]:
+        out = translate_campaign(GLOSSARY_TEXT, "Indonesian", template=template)
+        kept = "Paket Hemat" in out
+        print(f"[{label} glossary] kept={kept} -> {out}")
+
+    # Evaluate: BLEU butuh terjemahan referensi; untuk iklan, cek nada
+    # (tone) manual lebih penting. Catat penilaianmu di README.
