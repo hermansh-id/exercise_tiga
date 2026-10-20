@@ -1,0 +1,21 @@
+[project]
+name = "exercise-three"
+version = "0.1.0"
+description = "Purwadhika exercise: building simple LLM apps (summarizer, translator, PII censor)"
+authors = [
+    {name = "Herman Sugi Harto",email = "herman.sugiharto@intellinum.com"}
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "openai>=1.0",
+    "streamlit>=1.30",
+    "python-dotenv>=1.0",
+]
+
+[tool.poetry]
+packages = [{include = "exercise_three", from = "src"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
